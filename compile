@@ -1,0 +1,12 @@
+# make an build folder for compilation intermediates
+
+mkdir -p ./build
+
+# compile the bootloader into a flat binary
+nasm -f bin -o ./build/boot ./src/boot.asm
+
+# create a small disk
+dd if=/dev/zero of="./build/disk.img" bs=512 count=2880
+
+# put the bootloader on first part of said disk
+dd conv=notrunc if="./build/boot" of="./build/disk.img" bs=512 count=1 seek=0
