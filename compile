@@ -1,5 +1,32 @@
-# make an build folder for compilation intermediates
+#!/bin/sh
 
+# make vars for getopts to use
+doQEMURun=0
+doQEMURunWithGDB=0
+
+# -r = run, -d debug
+while getopts ":rdh" opt; do
+case $opt in
+	r)
+		echo "-r was triggered!"
+		doQEMURun=1
+		;;
+	d)
+		echo "-d was triggered"
+		doQEMURunWithGDB=1
+		;;
+	h)
+		echo "Compile script for OS:\nUse -r to run qemu right away, use -d to run with gdb attached and start from gdb"
+		exit 0
+		;;
+	\?)
+		echo "Invalid option: -$OPTARG" >&2
+		exit 1
+		;;
+esac
+done
+
+# make an build folder for compilation intermediates
 mkdir -p ./build
 
 # compile the bootloader into a flat binary
@@ -10,3 +37,12 @@ dd if=/dev/zero of="./build/disk.img" bs=512 count=2880
 
 # put the bootloader on first part of said disk
 dd conv=notrunc if="./build/boot" of="./build/disk.img" bs=512 count=1 seek=0
+
+if [ $doQEMURunWithGDB -eq 1 ]
+then
+	qemu-system-i386 -fda ./build/disk.img -gdb tcp::26000 -S &
+	gdb -ex "target remote localhost:26000"
+elif [ $doQEMURun -eq 1 ]
+then
+	qemu-system-i386 -fda ./build/disk.img
+fi
