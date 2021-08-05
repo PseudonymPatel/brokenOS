@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# get this script's location for relative paths
+root="$(dirname $(realpath $0))" # (get path of script then chop script name)
+
 # make vars for getopts to use
 doQEMURun=0
 doQEMURunWithGDB=0
@@ -27,22 +30,22 @@ esac
 done
 
 # make an build folder for compilation intermediates
-mkdir -p ./build
+mkdir -p $root/build
 
 # compile the bootloader into a flat binary
-nasm -f bin -o ./build/boot ./src/boot.asm
+nasm -f bin -o $root/build/boot $root/src/boot.asm
 
 # create a small disk
-dd if=/dev/zero of="./build/disk.img" bs=512 count=2880
+dd if=/dev/zero of="$root/build/disk.img" bs=512 count=2880
 
 # put the bootloader on first part of said disk
-dd conv=notrunc if="./build/boot" of="./build/disk.img" bs=512 count=1 seek=0
+dd conv=notrunc if="$root/build/boot" of="$root/build/disk.img" bs=512 count=1 seek=0
 
 if [ $doQEMURunWithGDB -eq 1 ]
 then
-	qemu-system-i386 -fda ./build/disk.img -gdb tcp::26000 -S &
+	qemu-system-i386 -fda $root/build/disk.img -gdb tcp::26000 -S &
 	gdb -ex "target remote localhost:26000"
 elif [ $doQEMURun -eq 1 ]
 then
-	qemu-system-i386 -fda ./build/disk.img
+	qemu-system-i386 -fda $root/build/disk.img
 fi
