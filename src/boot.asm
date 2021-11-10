@@ -1,90 +1,75 @@
-;=====================================
-; nasmw boot.asm -f bin -o boot.bin
-; partcopy boot.bin 0 200 -f0
+[ORG 0x7c00]      ; start code at 0x7c00
 
-[ORG 0x7c00]      ; add to offsets
-   xor ax, ax    ; make it zero
-   mov ds, ax   ; DS=0
-   mov ss, ax   ; stack starts at 0
-   mov sp, 0x9c00   ; 2000h past code start
+; move cursor to start
+mov ah, 0x02
+mov bh, 0
+mov dx, 0x0000 ; initial cursor position
+int 0x10
 
-   cld
+; load and print first message
+mov bx, msgb
+call biosprintstring
 
-   mov ax, 0xb800   ; text video memory
-   mov es, ax
+; load and print second message
+mov bx, msga ; new string
+call biosprintstring
 
-   mov si, msg   ; show text string
-   call sprint
+; hang indefinitely
+jmp hang
 
-   mov ax, 0xb800   ; look at video mem
-   mov gs, ax
-   mov bx, 0x0000   ; 'W'=57 attrib=0F
-   mov ax, [gs:bx]
+; destroys: ax, bx, cx, dx, si
+biosprintstring:
+	mov si, bx ; load si with the string ptr
 
-   mov  word [reg16], ax ;look at register
-   call printreg16
+	; get cursor position
+	mov ah, 0x03
+	mov bh, 0
+	int 0x10
 
+	; move cursor to line start
+	mov ah, 0x02
+	mov bh, 0
+	mov dl, 0 ; column, dh = row, set from getting cursor position`
+	int 0x10
+bpstringmain:
+	mov al, [si] ; load next character
+	cmp al, 0 ; if the character is null, jump to hang
+	je endpstring
+	; call biosprintchar ; print the char in al
+	mov ah, 0x0E
+	mov bh, 0
+	mov bl, 0x04
+	int 0x10
+
+	mov ah, 0x02
+	mov bh, 0
+	inc dl
+	;int 0x10
+
+	inc si
+	jmp bpstringmain
+
+endpstring:
+	; new line then return
+	; get cursor position to move it to next row
+	mov ah, 0x03
+	mov bh, 0
+	int 0x10
+
+	mov ah, 0x02
+	mov bh, 0
+	inc dh ; next line
+	mov dl, 0 ; cursor to start
+	int 0x10
+	ret
+
+; inf loop when done
 hang:
-   jmp hang
+	jmp hang
 
-;----------------------
-dochar:   call cprint         ; print one character
-sprint:   lodsb      ; string char to AL
-   cmp al, 0
-   jne dochar   ; else, we're done
-   add byte [ypos], 1   ;down one row
-   mov byte [xpos], 0   ;back to left
-   ret
+msga	db "Hello, BIOS", 0
+msgb 	db "I like your big cock and balls my friend.", 0
 
-cprint:   mov ah, 0x0F   ; attrib = white on black
-   mov cx, ax    ; save char/attribute
-   movzx ax, byte [ypos]
-   mov dx, 160   ; 2 bytes (char/attrib)
-   mul dx      ; for 80 columns
-   movzx bx, byte [xpos]
-   shl bx, 1    ; times 2 to skip attrib
-
-   mov di, 0        ; start of video memory
-   add di, ax      ; add y offset
-   add di, bx      ; add x offset
-
-   mov ax, cx        ; restore char/attribute
-   stosw              ; write char/attribute
-   add byte [xpos], 1  ; advance to right
-
-   ret
-
-;------------------------------------
-
-printreg16:
-   mov di, outstr16
-   mov ax, [reg16]
-   mov si, hexstr
-   mov cx, 4   ;four places
-hexloop:
-   rol ax, 4   ;leftmost will
-   mov bx, ax   ; become
-   and bx, 0x0f   ; rightmost
-   mov bl, [si + bx];index into hexstr
-   mov [di], bl
-   inc di
-   dec cx
-   jnz hexloop
-
-   mov si, outstr16
-   call sprint
-
-   ret
-
-;------------------------------------
-
-xpos   db 0
-ypos   db 0
-hexstr   db '0123456789ABCDEF'
-outstr16   db '0000', 0  ;register value string
-reg16   dw    0  ; pass values to printreg16
-msg   db "What are you doing, Dave?", 0
 times 510-($-$$) db 0
 db 0x55
 db 0xAA
-;==================================
