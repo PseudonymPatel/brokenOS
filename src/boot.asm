@@ -1,4 +1,5 @@
 [ORG 0x7c00]      ; start code at 0x7c00
+[BITS 16]
 
 ; move cursor to start
 mov ah, 0x02
@@ -15,7 +16,6 @@ mov bx, msga ; new string
 call biosprintstring
 
 ; what's in bx??????
-mov bx, 0xaaaa
 call printregister
 
 ; hang indefinitely
@@ -87,7 +87,7 @@ endpstring:
 ; FUNCTION printregister
 ;	prints the value held by a register
 ; 	bx = value to print
-;	DESTORYS - a bunch, TODO!!
+;	TODO optomise, maybe put into a loop?
 printregister:
 	push ax
 	push bx
@@ -98,11 +98,11 @@ printregister:
 	mov al, bl ; start with bl and work up to top of ah
 	and al, 0x0f ; lowest bit of bl only
 	add al, 0x30
-	cmp al, 0x09
+	cmp al, 0x39
 	jle _prg1
 	add al, 0x07
 _prg1:
-	mov [registervalue16bit], byte al
+	mov [registervalue16bit+0x03], byte al
 
 	; high byte of bl
 	xor ax, ax
@@ -110,11 +110,32 @@ _prg1:
 	and al, 0xf0
 	shr al, 4 ; shift into lower part of al
 	add al, 0x30
-	cmp al, 0x09
+	cmp al, 0x39
 	jle _prg2
 	add al, 0x07
 _prg2:
-	mov [registervalue16bit-0x02], byte al
+	mov [registervalue16bit+0x02], byte al
+
+	xor ax, ax
+	mov al, bh
+	and al, 0x0f
+	add al, 0x30
+	cmp al, 0x39
+	jle _prg3
+	add al, 0x07
+_prg3:
+	mov [registervalue16bit+0x01], byte al
+
+	xor ax, ax
+	mov al, bh
+	and al, 0xf0
+	shr al, 4
+	add al, 0x30
+	cmp al, 0x39
+	jle _prg4
+	add al, 0x07
+_prg4:
+	mov [registervalue16bit], byte al
 
 	mov bx, registervalue16bit
 	call biosprintstring
