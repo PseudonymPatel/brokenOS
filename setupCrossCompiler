@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# install required dependencies
+sudo apt-get install build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
+
+mkdir xcompiler
+cd xcompiler
+wget -c -O binutils.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-2.36.tar.gz
+wget -c -O gcc.tar.gz https://ftp.gnu.org/gnu/gcc/gcc-10.3.0/gcc-10.3.0.tar.gz
+
+if [ ! -d "./binutils" ]
+then
+	mkdir binutils
+	tar -xvf binutils.tar.gz -C binutils --strip-components 1
+fi
+
+if [ ! -d "./gcc" ]
+then
+	mkdir gcc
+	tar -xvf gcc.tar.gz -C gcc --strip-components 1
+fi
+
+echo "script not complete, do not use it, follow website manually"
